@@ -5,8 +5,16 @@
 //! La herramienta NO inventa el toque del tambor: solo coloca las sílabas de la
 //! letra sobre esa base, cuidando que las sílabas tónicas caigan en los golpes fuertes.
 //!
+//! Lo medido (ver analisis/): la intensidad del golpe es continua, no de dos niveles;
+//! el pulso es fuerte en ~80-87% de los casos y el "y" es fuerte en ~40%, así que
+//! X/x es la tendencia y no cada golpe. Hay golpes débiles extra a mitad de corchea
+//! (24-34% de las corcheas) cuyo origen (tambor o voz) no se pudo determinar, por
+//! eso no se modelan. El tempo de "La Pequeña Red" sube de ~83 a ~91 BPM: de ahí `--bpm-fin`.
+//!
 //! Uso:
-//!   panwewe-letra [--bpm 81] [--pulsos 4] [--nah] [--mono] [archivo]
+//!   panwewe-letra [--bpm 81] [--bpm-fin 90] [--tiempo] [--pulsos 4] [--nah] [--mono] [archivo]
+//!   --bpm-fin  el tempo cambia linealmente de --bpm a --bpm-fin a lo largo de toda la letra
+//!   --tiempo   muestra en segundos dónde empieza cada fila (se activa solo con --bpm-fin)
 //!   (sin archivo, lee de la entrada estándar; una línea de letra por línea)
 
 use std::env;
@@ -158,7 +166,38 @@ fn analizar(palabra: &str, nah: bool, mono_fuerte: bool) -> Vec<(String, bool)> 
         .collect()
 }
 
-fn imprimir(num: usize, linea: &str, bpm: f32, pg: usize, nah: bool, mono: bool) {
+type Casilla = Option<(String, bool)>;
+
+/// Una línea ya colocada sobre la rejilla de corcheas.
+struct Linea {
+    vista: String,
+    slots: Vec<Casilla>,
+    pausas: usize,
+}
+
+/// Tempo: fijo, o lineal de `ini` a `fin` sobre `total` corcheas de toda la letra.
+struct Reloj {
+    ini: f32,
+    fin: Option<f32>,
+    total: usize,
+}
+
+impl Reloj {
+    /// Duración en segundos de la corchea global `k`.
+    fn corchea(&self, k: usize) -> f32 {
+        let bpm = match self.fin {
+            Some(f) if self.total > 1 => self.ini + (f - self.ini) * k as f32 / (self.total - 1) as f32,
+            _ => self.ini,
+        };
+        30.0 / bpm
+    }
+    /// Segundos entre las corcheas globales `desde` (incluida) y `hasta` (excluida).
+    fn tiempo(&self, desde: usize, hasta: usize) -> f32 {
+        (desde..hasta).fold(0.0, |t, k| t + self.corchea(k))
+    }
+}
+
+fn colocar(linea: &str, nah: bool, mono: bool) -> Option<Linea> {
     let mut sils: Vec<(String, bool)> = Vec::new();
     let mut vista: Vec<String> = Vec::new();
     for w in linea.to_lowercase().split_whitespace() {
@@ -176,11 +215,11 @@ fn imprimir(num: usize, linea: &str, bpm: f32, pg: usize, nah: bool, mono: bool)
         sils.extend(a);
     }
     if sils.is_empty() {
-        return;
+        return None;
     }
     // Anacrusa: que la primera tónica caiga en un pulso (casilla par).
     let p = sils.iter().position(|(_, t)| *t).unwrap_or(0);
-    let mut slots: Vec<Option<(String, bool)>> = Vec::new();
+    let mut slots: Vec<Casilla> = Vec::new();
     if p % 2 == 1 {
         slots.push(None);
     }
@@ -192,6 +231,12 @@ fn imprimir(num: usize, linea: &str, bpm: f32, pg: usize, nah: bool, mono: bool)
         }
         slots.push(Some((s, t)));
     }
+    Some(Linea { vista: vista.join(" "), slots, pausas })
+}
+
+/// `k0`: índice global de la primera corchea de la línea.
+fn imprimir(num: usize, l: &Linea, k0: usize, pg: usize, reloj: &Reloj, mostrar_tiempo: bool) {
+    let slots = &l.slots;
     let w = slots
         .iter()
         .flatten()
@@ -201,7 +246,7 @@ fn imprimir(num: usize, linea: &str, bpm: f32, pg: usize, nah: bool, mono: bool)
         .max(3)
         + 1;
     let grupo = pg * 2;
-    println!("Línea {num}: {}", vista.join(" "));
+    println!("Línea {num}: {}", l.vista);
     let mut i = 0;
     while i < slots.len() {
         let fin = (i + grupo).min(slots.len());
@@ -217,16 +262,25 @@ fn imprimir(num: usize, linea: &str, bpm: f32, pg: usize, nah: bool, mono: bool)
             r2.push_str(&format!("{golpe:<w$}"));
             r3.push_str(&format!("{voz:<w$}"));
         }
+        if mostrar_tiempo {
+            r1.push_str(&format!(" [{:.1} s]", reloj.tiempo(0, k0 + i)));
+        }
         println!("{r1}\n{r2}\n{r3}");
         i = fin;
     }
-    let seg = slots.len() as f32 * 60.0 / bpm / 2.0;
-    println!("({} corcheas, {} pausas añadidas, ~{:.1} s a {} BPM)\n", slots.len(), pausas, seg, bpm);
+    if reloj.fin.is_some() {
+        let seg = reloj.tiempo(k0, k0 + slots.len());
+        println!("({} corcheas, {} pausas añadidas, ~{:.1} s)\n", slots.len(), l.pausas, seg);
+    } else {
+        let seg = slots.len() as f32 * 60.0 / reloj.ini / 2.0;
+        println!("({} corcheas, {} pausas añadidas, ~{:.1} s a {} BPM)\n", slots.len(), l.pausas, seg, reloj.ini);
+    }
 }
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let (mut bpm, mut pg, mut nah, mut mono) = (81.0f32, 4usize, false, false);
+    let (mut bpm_fin, mut tiempo): (Option<f32>, bool) = (None, false);
     let mut archivo: Option<String> = None;
     let mut i = 0;
     while i < args.len() {
@@ -235,16 +289,23 @@ fn main() {
                 i += 1;
                 bpm = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(bpm);
             }
+            "--bpm-fin" => {
+                i += 1;
+                bpm_fin = args.get(i).and_then(|s| s.parse().ok());
+            }
             "--pulsos" => {
                 i += 1;
                 pg = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(pg).max(1);
             }
+            "--tiempo" => tiempo = true,
             "--nah" => nah = true,
             "--mono" => mono = true,
             otro => archivo = Some(otro.to_string()),
         }
         i += 1;
     }
+    bpm = bpm.max(1.0);
+    bpm_fin = bpm_fin.map(|f| f.max(1.0));
     let texto = match archivo {
         Some(p) => fs::read_to_string(&p).expect("no se pudo leer el archivo"),
         None => {
@@ -253,8 +314,23 @@ fn main() {
             s
         }
     };
-    println!("Base: un golpe por corchea, X en el pulso y x en el \"y\". Tempo {bpm} BPM.\n");
-    for (n, l) in texto.lines().enumerate() {
-        imprimir(n + 1, l, bpm, pg, nah, mono);
+    // Primero se colocan todas las líneas: el tempo creciente necesita el total de corcheas.
+    let lineas: Vec<(usize, Linea)> = texto
+        .lines()
+        .enumerate()
+        .filter_map(|(n, l)| colocar(l, nah, mono).map(|x| (n + 1, x)))
+        .collect();
+    let total: usize = lineas.iter().map(|(_, l)| l.slots.len()).sum();
+    let reloj = Reloj { ini: bpm, fin: bpm_fin, total };
+    match bpm_fin {
+        Some(f) => println!(
+            "Base: un golpe por corchea, X en el pulso y x en el \"y\". Tempo {bpm} → {f} BPM (lineal sobre {total} corcheas).\n"
+        ),
+        None => println!("Base: un golpe por corchea, X en el pulso y x en el \"y\". Tempo {bpm} BPM.\n"),
+    }
+    let mut k0 = 0;
+    for (num, l) in &lineas {
+        imprimir(*num, l, k0, pg, &reloj, tiempo || bpm_fin.is_some());
+        k0 += l.slots.len();
     }
 }
