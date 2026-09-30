@@ -1,0 +1,4 @@
+target/
+audio/
+*.wav
+*.npz

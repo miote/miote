@@ -1,0 +1,151 @@
+{
+  "archivo": "ninito",
+  "duracion_s": 506.8,
+  "tempo_global_bpm_(autocorr)": 80.7,
+  "n_onsets": 1534,
+  "ioi_mediana_ms": 325.1,
+  "pulso_bpm_local": {
+    "mediana": 80.7,
+    "p10": 78.3,
+    "p90": 83.4,
+    "primer_cuarto": 80.7,
+    "ultimo_cuarto": 80.7
+  },
+  "desviacion_a_rejilla_ms_mediana_abs": 40.0,
+  "golpes_fuera_de_rejilla_(>1/4 corchea)": {
+    "n": 392,
+    "pct": 26.8
+  },
+  "casillas_total": 1292,
+  "cobertura_corcheas_con_golpe_pct": 82.2,
+  "cobertura_en_pulso_pct": 90.6,
+  "cobertura_en_y_pct": 73.8,
+  "pulso_mas_fuerte_que_y_pct": 89.2,
+  "razon_pulso_sobre_y_mediana": 5.71,
+  "razon_pulso_sobre_y_p25_p75": [
+    2.4,
+    20.21
+  ],
+  "prueba_signo_p": 2.4084104253705895e-68,
+  "control_y_vs_pulso_siguiente_pct_pulso_mayor": 92.5,
+  "autocorr_fuerza_top_lags_corcheas": [
+    [
+      2,
+      0.652
+    ],
+    [
+      4,
+      0.619
+    ],
+    [
+      16,
+      0.603
+    ],
+    [
+      14,
+      0.593
+    ],
+    [
+      6,
+      0.591
+    ],
+    [
+      12,
+      0.586
+    ],
+    [
+      18,
+      0.586
+    ],
+    [
+      10,
+      0.569
+    ]
+  ],
+  "autocorr_lags_1_a_16": [
+    -0.35,
+    0.65,
+    -0.33,
+    0.62,
+    -0.34,
+    0.59,
+    -0.35,
+    0.54,
+    -0.34,
+    0.57,
+    -0.35,
+    0.59,
+    -0.35,
+    0.59,
+    -0.36,
+    0.6
+  ],
+  "ausencia_rango_por_modulo": {
+    "2": 0.167,
+    "3": 0.021,
+    "4": 0.201,
+    "6": 0.195,
+    "8": 0.212,
+    "12": 0.231,
+    "16": 0.272
+  },
+  "tasa_ausencia_global": 0.178,
+  "fuerza_media_relativa_mod4": [
+    1.59,
+    0.35,
+    1.48,
+    0.33
+  ],
+  "fuerza_media_relativa_mod6": [
+    1.58,
+    0.32,
+    1.56,
+    0.36,
+    1.47,
+    0.35
+  ],
+  "fuerza_media_relativa_mod8": [
+    1.54,
+    0.37,
+    1.4,
+    0.37,
+    1.64,
+    0.33,
+    1.58,
+    0.3
+  ],
+  "centroide_perc_hz": {
+    "mediana": 1630,
+    "p10": 627,
+    "p90": 4170
+  },
+  "centroide_banda_grave_hz": {
+    "mediana": 235,
+    "p10": 175,
+    "p90": 298
+  },
+  "bimodalidad_sarle_(>0.555)_centroide_perc": 0.617,
+  "2means_centroide_perc": {
+    "c1_hz": 1381,
+    "c2_hz": 4434,
+    "frac_c1": 0.76,
+    "dprime": 2.73
+  },
+  "corr_centroide_vs_fuerza_(spearman)": -0.684,
+  "centroide_mediano_en_pulso_hz": 1050,
+  "centroide_mediano_en_y_hz": 1856,
+  "onsets_en_posicion_semicorchea_(+-0.15)": {
+    "n": 237,
+    "pct": 16.2
+  },
+  "fuera_de_rejilla_por_casilla_mod8": [
+    55,
+    48,
+    51,
+    40,
+    69,
+    44,
+    39,
+    46
+  ]
+}
